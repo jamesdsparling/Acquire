@@ -18,7 +18,7 @@ struct ContentView: View {
         animation: .default)
     private var listItems: FetchedResults<ListItem>
     
-    @State private var showingAdd = false
+    @State private var showingAddSheet = false
     var newItem = ListItem()
     @State private var sortBy = SortOptions.custom
     @State private var sortReversed = false
@@ -70,7 +70,7 @@ struct ContentView: View {
                 .toolbar {
                     ToolbarItem {
                         Button(action: {
-                            showingAdd = true
+                            showingAddSheet = true
                         }) {
                             HStack {
                                 Image(systemName: "plus.circle.fill")
@@ -84,11 +84,11 @@ struct ContentView: View {
                         SortMenu(sortBy: $sortBy, sortReversed: $sortReversed)
                     }
                 }
-                .sheet(isPresented: $showingAdd) {
+                .sheet(isPresented: $showingAddSheet) {
                     let listItemTypes = Set(listItems.map { $0.type ?? "Unknown Type"})
                     let filteredTypePresets = typePresets.filter({ !listItemTypes.contains($0) })
                     let typePresets = listItemTypes + filteredTypePresets
-                    AddItem(showingAdd: $showingAdd, presets: typePresets)
+                    AddItem(showingAdd: $showingAddSheet, presets: typePresets)
                         .environment(\.managedObjectContext, self.moc)
                 }
             }
