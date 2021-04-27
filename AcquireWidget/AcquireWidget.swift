@@ -130,8 +130,8 @@ struct EmojiWidget: Widget {
 @main
 struct AcquireWidgets: WidgetBundle {
     var body: some Widget {
-        ListWidget()
         EmojiWidget()
+        ListWidget()
     }
 }
 

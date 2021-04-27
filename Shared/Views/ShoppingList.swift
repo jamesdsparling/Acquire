@@ -11,8 +11,10 @@ import WidgetKit
 
 struct ShoppingList: View {
     @Environment(\.managedObjectContext) private var moc
-    
     var listItems: FetchedResults<ListItem>
+    
+    @AppStorage("currencySymbol") var currencySymbol: String = "£"
+    
     @Binding var sortBy: SortOptions
     @Binding var sortReversed: Bool
     @Binding var showingAddSheet: Bool
@@ -36,83 +38,67 @@ struct ShoppingList: View {
             }
         })
         
-        List(selection: $selectKeeper) {
+//        selection: $selectKeeper
+        List() {
             Section {
                 TextInputBar(text: $searchText, label: "🔎  Search...", buttonType: .cancel, isEditing: $isSearching)
             }
             Section {
                 ForEach(sortedList.filter { $0.quantity > 0 && (searchText.isEmpty ? true : ($0.emoji!.lowercased() + $0.name!.lowercased()).contains(searchText.lowercased())) }, id: \.name) { listItem in
-                    ListRowButton(listItem: listItem)
-                        .environment(\.managedObjectContext, self.moc)
+                     
                 }
-//                .onDelete(perform: delete)
-                //                        .onMove(perform: move)
+                .onDelete{indexSet in
+                    for index in indexSet {
+                        let item = (sortedList.filter { $0.quantity > 0 && (searchText.isEmpty ? true : ($0.emoji!.lowercased() + $0.name!.lowercased()).contains(searchText.lowercased())) })[index]
+                        moc.delete(item)
+                    }
+                }
+//                .onMove(perform: {print("Delete")})
             }
             if sortedList.contains(where: { $0.quantity == 0 && (searchText.isEmpty ? true : $0.name!.lowercased().contains(searchText.lowercased())) }) {
                 Section(header: Text("Preveious Items")) {
                     ForEach(sortedList.filter { $0.quantity == 0 && (searchText.isEmpty ? true : $0.name!.lowercased().contains(searchText.lowercased())) }, id: \.name) { listItem in
                         ListRowButton(listItem: listItem)
-                            .environment(\.managedObjectContext, self.moc)
+                            .environment(\.managedObjectContext, self.moc) 
                     }
-                    .onDelete(perform: { indexSet in
-                        indexSet.map { listItems[$0] }.forEach(moc.delete)
-                        try? moc.save()
-                        WidgetCenter.shared.reloadAllTimelines()
-                    })
+                    .onDelete{indexSet in
+                        for index in indexSet {
+                            let item = (sortedList.filter { $0.quantity == 0 && (searchText.isEmpty ? true : $0.name!.lowercased().contains(searchText.lowercased())) })[index]
+                            moc.delete(item)
+                        }
+                    }
+//                    .onMove(perform: {print("Delete")})
                 }
             }
         }
         .animation(.easeInOut)
-        .environment(\.editMode, self.$editMode)
+//        .environment(\.editMode, self.$editMode)
         .animation(isSearching ? .none : .default)
-        .navigationBarTitle("Shopping List")
+        .navigationBarTitle(listItems.reduce(0, {$0 + ($1.price * Float($1.quantity))}) == 0 ? "Shopping List" : currencySymbol + String(format: "%.2f", listItems.reduce(0, {$0 + ($1.price * Float($1.quantity))})))
         .listStyle(InsetGroupedListStyle())
         .toolbar {
-//            ContentViewToolbar(listItems: listItems, selectKeeper: $selectKeeper, editMode: $editMode, sortBy: $sortBy, sortReversed: $sortReversed)
-//                .environment(\.managedObjectContext, self.moc)
-            ToolbarItem(placement: .bottomBar) {
-                if editMode == .active {
-                    Button(action: {
-                        for deleteName in selectKeeper {
-                            let deleteItem = listItems.first(where: {$0.name == deleteName})
-                            deleteItem!.quantity = deleteItem!.quantity == 0 ? 1 : 0
-                            try? self.moc.save()
-                            WidgetCenter.shared.reloadAllTimelines()
-                        }
-                        selectKeeper = Set<String>()
-                        editMode.toggle()
-                    }) {
-                        HStack {
-                            Image(systemName: "checkmark")
-                            Text("Completed")
-                                .font(.headline)
-                        }
-                    }
-                    .disabled(selectKeeper.count == 0)
-                }
-            }
-
-            ToolbarItem(placement: .navigationBarLeading) {
-                CustomEditButton(sortBy: $sortBy, sortReversed: $sortReversed, selectKeeper: $selectKeeper, editMode: $editMode)
-            }
+//            ToolbarItem(placement: .navigationBarLeading) {
+//                CustomEditButton(sortBy: $sortBy, sortReversed: $sortReversed, selectKeeper: $selectKeeper, editMode: $editMode)
+//            }
 
             ToolbarItem(placement: .navigationBarTrailing) {
-                if editMode == .inactive {
+//                if editMode == .inactive {
                     SortMenu(sortBy: $sortBy, sortReversed: $sortReversed)
-                } else {
-                    Button(action: {
-                        for deleteName in selectKeeper {
-                            moc.delete(listItems.first(where: {$0.name == deleteName})!)
-                            try? self.moc.save()
-                            WidgetCenter.shared.reloadAllTimelines()
-                        }
-                        selectKeeper = Set<String>()
-                        editMode.toggle()
-                    }) {
-                        Image(systemName: "trash")
-                    }
-                    .disabled(selectKeeper.count == 0)
-                }
+//                } else {
+//                    Button(action: {
+//                        for deleteName in selectKeeper {
+//                            moc.delete(listItems.first(where: {$0.name == deleteName})!)
+//                            try? self.moc.save()
+//                            WidgetCenter.shared.reloadAllTimelines()
+//                        }
+//                        selectKeeper = Set<String>()
+//                        editMode.toggle()
+//                        print(selectKeeper)
+//                    }) {
+//                        Image(systemName: "trash")
+//                    }
+////                    .disabled(selectKeeper.count == 0)
+//                }
             }
         }
     }
@@ -120,8 +106,10 @@ struct ShoppingList: View {
 
 struct ShoppingList_Previews: PreviewProvider {
     static var previews: some View {
-        ContentView()
-            .environment(\.managedObjectContext, PersistenceController.preview.container.viewContext)
+        Group {
+            ContentView()
+                .environment(\.managedObjectContext, PersistenceController.preview.container.viewContext)
+        }
 //            .environment(\.colorScheme, .dark)
     }
 }

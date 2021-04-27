@@ -22,6 +22,7 @@ struct PersistenceController {
             newItem.type = "Other"
             newItem.emoji = "🙃"
             newItem.quantity = 1
+            newItem.price = Float.random(in: 0..<5)
             newItem.date = Date()
         }
         let newItem = ListItem(context: viewContext)
